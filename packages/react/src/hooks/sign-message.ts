@@ -1,60 +1,54 @@
-import { useMutation } from "@tanstack/react-query";
-import { GillUseRpcHook } from "./types.js";
-import { useWallet } from "./wallet.js";
-import { GILL_HOOK_CLIENT_KEY } from "../const.js";
 import {
   SolanaSignMessage,
   SolanaSignMessageFeature,
   SolanaSignMessageInput,
-  SolanaSignMessageOutput,
+  SolanaSignMessageOutput
 } from "@solana/wallet-standard-features";
+import { useMutation } from "@tanstack/react-query";
+import { getWalletFeature } from "@wallet-standard/react";
+import { GILL_HOOK_CLIENT_KEY } from "../const.js";
+import { useWallet } from "./wallet.js";
 
-// Define the configuration type for the RPC method
-type RpcConfig = SolanaSignMessageInput;
+type RpcConfig = Partial<Omit<SolanaSignMessageInput, "message">>;
 
-type UseSignMessageInput<TConfig extends RpcConfig = RpcConfig> = GillUseRpcHook<TConfig> & {
-  /*
-   * The message to sign.
-   */
-  message: Uint8Array | string;
-};
+interface UseSignMessageReturn {
+  data: SolanaSignMessageOutput | undefined;
+  error: Error | null;
+  isPending: boolean;
+  signMessage: () => Promise<SolanaSignMessageOutput>;
+}
 
-// Define the response type for the hook
-type UseSignMessageResponse = SolanaSignMessageOutput;
-
-/*
- * Hook for signing a message using the connected wallet.
- *
- */
-export function useSignMessage<TConfig extends RpcConfig = RpcConfig>({
+export function useSignMessage({
   config,
   message,
-}: UseSignMessageInput<TConfig>) {
-  const { wallet } = useWallet();
+}: {
+  config: RpcConfig;
+  message: Uint8Array | string;
+}): UseSignMessageReturn {
+  const { wallet, account } = useWallet();
 
-  const { data, ...rest } = useMutation<SolanaSignMessageOutput, Error>({
+  const mutation = useMutation<SolanaSignMessageOutput, Error>({
     mutationFn: async (): Promise<SolanaSignMessageOutput> => {
-      if (!wallet) {
-        throw new Error("Wallet not connected");
+      if (!wallet) throw new Error("Wallet not connected");
+
+      const feature = getWalletFeature(
+        wallet,
+        SolanaSignMessage,
+      ) as SolanaSignMessageFeature[typeof SolanaSignMessage] | undefined;
+
+      if (!feature) {
+        throw new Error("Wallet does not support signMessage");
       }
 
-      const feature = (wallet.features as unknown as Record<string, unknown>)?.[SolanaSignMessage] as
-        | SolanaSignMessageFeature[typeof SolanaSignMessage]
-        | undefined;
-
-      if (!feature || typeof feature.signMessage !== "function") {
-        throw new Error("Wallet does not support signMessage");
+      const signingAccount = config?.account ?? account;
+      if (!signingAccount) {
+        throw new Error("No wallet account selected");
       }
 
       const messageBytes = typeof message === "string" ? new TextEncoder().encode(message) : message;
 
       const input: SolanaSignMessageInput = {
-        ...(config || {}),
-        account:
-          config?.account ??
-          (() => {
-            throw new Error("Account is required in config");
-          })(),
+        account: signingAccount,
         message: messageBytes,
       };
 
@@ -66,8 +60,11 @@ export function useSignMessage<TConfig extends RpcConfig = RpcConfig>({
     retry: 3,
     retryDelay: (index) => Math.min(1000 * 2 ** index, 3000),
   });
+
   return {
-    ...rest,
-    message: data as UseSignMessageResponse,
+    data: mutation.data,
+    error: mutation.error,
+    isPending: mutation.isPending,
+    signMessage: mutation.mutateAsync,
   };
 }
