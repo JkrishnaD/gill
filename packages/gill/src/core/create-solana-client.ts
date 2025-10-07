@@ -11,21 +11,25 @@ import { simulateTransactionFactory } from "./simulate-transaction";
  */
 export function createSolanaClient(
   props: Omit<CreateSolanaClientArgs<MainnetUrl | "mainnet">, "urlOrMoniker"> & {
+    cluster: "mainnet",
     urlOrMoniker: "mainnet";
   },
 ): SolanaClient<MainnetUrl>;
 export function createSolanaClient(
   props: Omit<CreateSolanaClientArgs<DevnetUrl | "devnet">, "urlOrMoniker"> & {
+    cluster: "devnet",
     urlOrMoniker: "devnet";
   },
 ): SolanaClient<DevnetUrl>;
 export function createSolanaClient(
   props: Omit<CreateSolanaClientArgs<TestnetUrl | "testnet">, "urlOrMoniker"> & {
+    cluster: "testnet";
     urlOrMoniker: "testnet";
   },
 ): SolanaClient<TestnetUrl>;
 export function createSolanaClient(
   props: Omit<CreateSolanaClientArgs<LocalnetUrl | "localnet">, "urlOrMoniker"> & {
+    cluster: "localnet";
     urlOrMoniker: "localnet";
   },
 ): SolanaClient<LocalnetUrl>;
@@ -33,6 +37,7 @@ export function createSolanaClient<TClusterUrl extends ModifiedClusterUrl>(
   props: CreateSolanaClientArgs<TClusterUrl>,
 ): SolanaClient<TClusterUrl>;
 export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
+  cluster,
   urlOrMoniker,
   rpcConfig,
   rpcSubscriptionsConfig,
@@ -74,6 +79,7 @@ export function createSolanaClient<TCluster extends ModifiedClusterUrl>({
   );
 
   return {
+    cluster,
     rpc,
     rpcSubscriptions,
     sendAndConfirmTransaction: sendAndConfirmTransactionWithSignersFactory({
