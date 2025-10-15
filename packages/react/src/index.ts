@@ -20,9 +20,9 @@ export * from "./providers.js";
  * Reexporting the Solana Wallet Standard functionality allows gill to
  * provide a cohesive developer experience
  */
-export * from "@solana/react";
+export { useSignIn, useSignMessage, useWalletAccountMessageSigner, useWalletAccountTransactionSendingSigner, useWalletAccountTransactionSigner } from "@solana/react";
 export * from "@solana/wallet-standard-features";
 export * from "@wallet-standard/core";
 export * from "@wallet-standard/react";
 
-export {useSignMessage} from "./hooks/sign-message.js"
+export { useSignMessage } from "./hooks/sign-message.js"
